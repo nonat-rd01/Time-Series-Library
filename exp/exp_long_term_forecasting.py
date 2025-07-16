@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 from utils.dtw_metric import dtw, accelerated_dtw
 from utils.augmentation import run_augmentation, run_augmentation_single
-
+import sys
 warnings.filterwarnings('ignore')
 
 
@@ -102,18 +102,31 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
-                batch_x = batch_x.float().to(self.device)
-                batch_y = batch_y.float().to(self.device)
-                batch_x_mark = batch_x_mark.float().to(self.device)
-                batch_y_mark = batch_y_mark.float().to(self.device)
+                batch_x = batch_x.float().to(self.device)##メインデータ
+                batch_y = batch_y.float().to(self.device)##ラベルデータ
+                batch_x_mark = batch_x_mark.float().to(self.device)##時刻
+                batch_y_mark = batch_y_mark.float().to(self.device)## 時刻
 
                 # decoder input
-                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()####timexerは使われていないぽい
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)####timexerは使われていないぽい
+
+                # print("batch_x:", batch_x.shape)
+                # print("batch_x_mark:", batch_x_mark.shape)
+                # print("batch_y:", batch_y.shape)
+                # print("batch_y_mark:", batch_y_mark.shape)
+                # print("dec_inp:", dec_inp.shape)
+                # sys.exit()
 
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
+                        # print("batch_x:", batch_x.shape)
+                        # print("batch_x_mark:", batch_x_mark.shape)
+                        # print("dec_inp:", dec_inp.shape)
+                        # print("batch_y_mark:", batch_y_mark.shape)
+                        # sys.exit()
+
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
                         f_dim = -1 if self.args.features == 'MS' else 0
@@ -122,11 +135,26 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         loss = criterion(outputs, batch_y)
                         train_loss.append(loss.item())
                 else:
+                    # print("batch_x:", batch_x.shape)
+                    # print("batch_x_mark:", batch_x_mark.shape)
+                    # print("dec_inp:", dec_inp.shape)
+                    # print("batch_y_mark:", batch_y_mark.shape)
+                    # print("batch_y:", batch_y.shape)
+                    # sys.exit()
+                    # print("batch_x_mark:", batch_x_mark)
+                    # sys.exit()
                     outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-
+                    # print("outputs:", outputs.shape)
+                    # sys.exit()
+                    # print("batch_y:", batch_y.shape)
                     f_dim = -1 if self.args.features == 'MS' else 0
                     outputs = outputs[:, -self.args.pred_len:, f_dim:]
                     batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
+                    # print("outputs:", outputs.shape)
+                    # print("batch_y:", batch_y.shape)
+                    # print("ここまで")
+                    # sys.exit()
+
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
 

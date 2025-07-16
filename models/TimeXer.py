@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from layers.SelfAttention_Family import FullAttention, AttentionLayer
 from layers.Embed import DataEmbedding_inverted, PositionalEmbedding
 import numpy as np
-
+import sys
 
 class FlattenHead(nn.Module):
     def __init__(self, n_vars, nf, target_window, head_dropout=0):
@@ -34,14 +34,30 @@ class EnEmbedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        # print("x:", x.shape)
+        #  x = [B, D, L]
+        #  x.shape = [32, 7, 96] → n_vars = 7
         # do patching
         n_vars = x.shape[1]
-        glb = self.glb_token.repeat((x.shape[0], 1, 1, 1))
+        glb = self.glb_token.repeat((x.shape[0], 1, 1, 1))#バッチ処理に必要。バッチ分リピートして複製する
+        # print("glb:", glb.shape)
+        # sys.exit()
 
         x = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_len)
         x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
+        # print(x.shape)
         # Input encoding
-        x = self.value_embedding(x) + self.position_embedding(x)
+        # x = self.value_embedding(x) + self.position_embedding(x)##positional encodingしている
+        value_emb = self.value_embedding(x)
+        pos_emb   = self.position_embedding(x)
+        # print(value_emb.shape)
+        # print(pos_emb.shape)
+        x = value_emb + pos_emb
+        # print(self.value_embedding(x).shape)
+        # print(self.position_embedding(x).shape)
+        
+        # print(x.shape)
+        # sys.exit()    
         x = torch.reshape(x, (-1, n_vars, x.shape[-2], x.shape[-1]))
         x = torch.cat([x, glb], dim=2)
         x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
@@ -56,6 +72,9 @@ class Encoder(nn.Module):
         self.projection = projection
 
     def forward(self, x, cross, x_mask=None, cross_mask=None, tau=None, delta=None):
+        # print("x:", x.shape)
+        # print("cross:", cross.shape)
+        # sys.exit()
         for layer in self.layers:
             x = layer(x, cross, x_mask=x_mask, cross_mask=cross_mask, tau=tau, delta=delta)
 
@@ -83,6 +102,10 @@ class EncoderLayer(nn.Module):
         self.activation = F.relu if activation == "relu" else F.gelu
 
     def forward(self, x, cross, x_mask=None, cross_mask=None, tau=None, delta=None):
+        # print("x:", x.shape)
+        # print("cross:", cross.shape)
+        # print("ここまで2")
+        # sys.exit()
         B, L, D = cross.shape
         x = x + self.dropout(self.self_attention(
             x, x, x,
@@ -181,23 +204,56 @@ class Model(nn.Module):
             dec_out = dec_out * (stdev[:, 0, -1:].unsqueeze(1).repeat(1, self.pred_len, 1))
             dec_out = dec_out + (means[:, 0, -1:].unsqueeze(1).repeat(1, self.pred_len, 1))
 
+        # print("dec_out:", dec_out.shape)
+        # print("ここまで")
+        # # sys.exit()
+
         return dec_out
 
 
-    def forecast_multi(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+    def forecast_multi(self, x_enc, x_mark_enc, x_dec, x_mark_dec):##現状ここが使用されている
+        # print("x_decは使われていない")
+        # # sys.exit()
+        # print("x_enc:", x_enc.shape)
+        # print("x_mark_enc:", x_mark_enc.shape)
+        # # print("x_dec:", x_dec.shape)
+        # print("x_mark_dec:", x_mark_dec.shape)
+        # # print("x_enc:", x_enc)
+        # print("x_mark_enc:", x_mark_enc)
+        # print("x_dec:", x_dec)
+        # print("x_mark_dec:", x_mark_dec)
+        # sys.exit()   
         if self.use_norm:
+            # print("つかわてている？")
             # Normalization from Non-stationary Transformer
             means = x_enc.mean(1, keepdim=True).detach()
             x_enc = x_enc - means
             stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
             x_enc /= stdev
+        # sys.exit()
 
         _, _, N = x_enc.shape
 
         en_embed, n_vars = self.en_embedding(x_enc.permute(0, 2, 1))
+        # print("en_embed:", en_embed.shape)
+        # print("x_mark_enc:", x_mark_enc.shape)
+        # sys.exit()
+        """
+        x_enc.permute(0, 2, 1)で次元を入れ替えている
+        x_enc: [B, L, D] -> [B, D, L]
+
+        x_encのみen_embeddingにいれている
+        """
         ex_embed = self.ex_embedding(x_enc, x_mark_enc)
+        # print("x_enc:", x_enc.shape)
+        # print("x_mark_enc:", x_mark_enc.shape)
+        # print("em_embed:", en_embed.shape)
+        # print("ex_embed:", ex_embed.shape)
+        # sys.exit()
 
         enc_out = self.encoder(en_embed, ex_embed)
+        # print("enc_out:", enc_out.shape)
+        # sys.exit()
         enc_out = torch.reshape(
             enc_out, (-1, n_vars, enc_out.shape[-2], enc_out.shape[-1]))
         # z: [bs x nvars x d_model x patch_num]
@@ -205,6 +261,8 @@ class Model(nn.Module):
 
         dec_out = self.head(enc_out)  # z: [bs x nvars x target_window]
         dec_out = dec_out.permute(0, 2, 1)
+        # print("dec_out:", dec_out.shape)
+        # sys.exit()
 
         if self.use_norm:
             # De-Normalization from Non-stationary Transformer

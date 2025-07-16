@@ -1,10 +1,13 @@
-from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
+from data_provider.data_loader import Dataset_ETT_hour, Dataset_PPG,  Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
     MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
 from data_provider.uea import collate_fn
 from torch.utils.data import DataLoader
+import sys
+
 
 data_dict = {
     'ETTh1': Dataset_ETT_hour,
+    'PPG': Dataset_PPG,###########追加した
     'ETTh2': Dataset_ETT_hour,
     'ETTm1': Dataset_ETT_minute,
     'ETTm2': Dataset_ETT_minute,
@@ -21,6 +24,12 @@ data_dict = {
 
 def data_provider(args, flag):
     Data = data_dict[args.data]
+    Data = data_dict["PPG"]##カスタム用
+    # print(Data)
+    # print(11111)
+
+    # sys.exit()  
+    
     timeenc = 0 if args.embed != 'timeF' else 1
 
     shuffle_flag = False if (flag == 'test' or flag == 'TEST') else True
@@ -64,7 +73,7 @@ def data_provider(args, flag):
     else:
         if args.data == 'm4':
             drop_last = False
-        data_set = Data(
+        data_set = Data(##ETTh1の場合ここが参照される
             args = args,
             root_path=args.root_path,
             data_path=args.data_path,
@@ -76,6 +85,8 @@ def data_provider(args, flag):
             freq=freq,
             seasonal_patterns=args.seasonal_patterns
         )
+        # print(data_set)
+        # sys.exit()
         print(flag, len(data_set))
         data_loader = DataLoader(
             data_set,
@@ -83,4 +94,5 @@ def data_provider(args, flag):
             shuffle=shuffle_flag,
             num_workers=args.num_workers,
             drop_last=drop_last)
+
         return data_set, data_loader

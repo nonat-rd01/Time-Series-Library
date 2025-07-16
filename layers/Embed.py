@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch.nn.utils import weight_norm
 import math
 
+import sys
+
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, d_model, max_len=5000):
@@ -126,19 +128,24 @@ class DataEmbedding(nn.Module):
         return self.dropout(x)
 
 
-class DataEmbedding_inverted(nn.Module):
+class DataEmbedding_inverted(nn.Module):###############TimeXerで使用
     def __init__(self, c_in, d_model, embed_type='fixed', freq='h', dropout=0.1):
         super(DataEmbedding_inverted, self).__init__()
         self.value_embedding = nn.Linear(c_in, d_model)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
+        # print(123456)
+        # print("x:", x.shape)
+        # sys.exit()
         x = x.permute(0, 2, 1)
         # x: [Batch Variate Time]
         if x_mark is None:
             x = self.value_embedding(x)
         else:
             x = self.value_embedding(torch.cat([x, x_mark.permute(0, 2, 1)], 1))
+            # print("x:", x.shape)
+            # sys.exit()
         # x: [Batch Variate d_model]
         return self.dropout(x)
 
@@ -180,6 +187,7 @@ class PatchEmbedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        # print("x:", x.shape)
         # do patching
         n_vars = x.shape[1]
         x = self.padding_patch_layer(x)

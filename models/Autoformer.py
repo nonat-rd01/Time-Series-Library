@@ -6,7 +6,7 @@ from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
 from layers.Autoformer_EncDec import Encoder, Decoder, EncoderLayer, DecoderLayer, my_Layernorm, series_decomp
 import math
 import numpy as np
-
+import sys
 
 class Model(nn.Module):
     """
@@ -86,6 +86,8 @@ class Model(nn.Module):
                 configs.d_model * configs.seq_len, configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        print(x_enc.shape)
+        sys.exit()
         # decomp init
         mean = torch.mean(x_enc, dim=1).unsqueeze(
             1).repeat(1, self.pred_len, 1)

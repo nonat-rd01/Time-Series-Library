@@ -1,0 +1,5 @@
+label,path,age,days,height,m_weight,BMI,f_weight,gender,FINGER_TIP_1kHz,FINGER_BASE_1kHz,ARM_1kHz,FINGER_TIP_200Hz,FINGER_BASE_200Hz,ARM_200Hz,FINGER_TIP_50Hz,FINGER_BASE_50Hz,ARM_50Hz
+1,/home/nonat/Desktop/ppg_data/pilot/380979_1_ppg,33,217,156,46.2,19.0,1399,0,1,0,0,1,0,0,1,0,0
+1,/home/nonat/Desktop/ppg_data/pilot/380979_2_ppg,33,218,156,46.2,19.0,1399,0,1,0,0,1,0,0,1,0,0
+1,/home/nonat/Desktop/ppg_data/pilot/380979_3_ppg,33,219,156,46.2,19.0,1399,0,1,0,0,1,0,0,1,0,0
+1,/home/nonat/Desktop/ppg_data/pilot/380979_4_ppg,33,228,156,46.2,19.0,1783,0,1,0,0,1,0,0,1,0,0 
